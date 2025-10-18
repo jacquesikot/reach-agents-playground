@@ -7,8 +7,24 @@ import { Button } from '@/components/ui/button';
 import type { AgentRunInput } from '@/lib/apiClient';
 import { Play } from 'lucide-react';
 
+interface SchemaProperty {
+  type?: string;
+  format?: string;
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+}
+
+interface Schema {
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+}
+
 interface InputFormProps {
-  schema?: Record<string, any>;
+  schema?: Schema;
   onSubmit: (inputs: AgentRunInput) => void;
   loading?: boolean;
 }
@@ -20,7 +36,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
     // Initialize form with default values from schema
     if (schema?.properties) {
       const initialValues: AgentRunInput = {};
-      Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
+      Object.entries(schema.properties).forEach(([key, prop]: [string, SchemaProperty]) => {
         initialValues[key] = prop.default || '';
       });
       setInputs(initialValues);
@@ -32,7 +48,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
     onSubmit(inputs);
   };
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: unknown) => {
     setInputs((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -41,9 +57,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Agent Inputs</CardTitle>
-          <CardDescription>
-            No input schema defined for this agent
-          </CardDescription>
+          <CardDescription>No input schema defined for this agent</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={() => onSubmit({})} disabled={loading}>
@@ -62,13 +76,11 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
     <Card>
       <CardHeader>
         <CardTitle>Agent Inputs</CardTitle>
-        <CardDescription>
-          Configure the inputs for running this agent
-        </CardDescription>
+        <CardDescription>Configure the inputs for running this agent</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {Object.entries(properties).map(([key, prop]: [string, any]) => {
+          {Object.entries(properties).map(([key, prop]: [string, SchemaProperty]) => {
             const isRequired = required.includes(key);
             const fieldType = prop.type || 'string';
 
@@ -78,14 +90,12 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
                   {prop.title || key}
                   {isRequired && <span className="text-destructive ml-1">*</span>}
                 </Label>
-                {prop.description && (
-                  <p className="text-xs text-muted-foreground">{prop.description}</p>
-                )}
+                {prop.description && <p className="text-xs text-muted-foreground">{prop.description}</p>}
 
                 {fieldType === 'string' && prop.format === 'textarea' ? (
                   <Textarea
                     id={key}
-                    value={inputs[key] || ''}
+                    value={(inputs[key] as string) || ''}
                     onChange={(e) => handleChange(key, e.target.value)}
                     placeholder={prop.placeholder || `Enter ${key}`}
                     required={isRequired}
@@ -96,7 +106,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
                   <Input
                     id={key}
                     type="number"
-                    value={inputs[key] || ''}
+                    value={(inputs[key] as string | number) || ''}
                     onChange={(e) => handleChange(key, parseFloat(e.target.value))}
                     placeholder={prop.placeholder || `Enter ${key}`}
                     required={isRequired}
@@ -109,7 +119,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
                     <input
                       id={key}
                       type="checkbox"
-                      checked={inputs[key] || false}
+                      checked={(inputs[key] as boolean) || false}
                       onChange={(e) => handleChange(key, e.target.checked)}
                       disabled={loading}
                       className="h-4 w-4"
@@ -122,7 +132,7 @@ export function InputForm({ schema, onSubmit, loading }: InputFormProps) {
                   <Input
                     id={key}
                     type="text"
-                    value={inputs[key] || ''}
+                    value={(inputs[key] as string) || ''}
                     onChange={(e) => handleChange(key, e.target.value)}
                     placeholder={prop.placeholder || `Enter ${key}`}
                     required={isRequired}
