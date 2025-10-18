@@ -29,6 +29,7 @@ export interface Agent {
   model_input_schema?: Record<string, unknown>;
   endpoint_params?: Record<string, unknown>;
   prompt_id?: string;
+  playground_mode: boolean;
 }
 
 export interface Prompt {
