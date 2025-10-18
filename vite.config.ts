@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      sourcemap: false,
+    },
     server: {
       proxy: {
         '/api/opik': {
@@ -28,21 +33,13 @@ export default defineConfig(({ mode }) => {
 
               if (apiKey) {
                 proxyReq.setHeader('authorization', apiKey);
-                console.log('Set authorization header');
-              } else {
-                console.log('WARNING: No API key found!');
               }
 
               if (workspace) {
                 proxyReq.setHeader('Comet-Workspace', workspace);
-                console.log('Set Comet-Workspace header');
-              } else {
-                console.log('WARNING: No workspace found!');
               }
 
               proxyReq.setHeader('Accept', 'application/json');
-              console.log('Set Accept header');
-              console.log('=== END PROXY DEBUG ===');
             });
           },
         },
