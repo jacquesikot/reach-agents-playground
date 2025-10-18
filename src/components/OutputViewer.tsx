@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AgentRunResult } from '@/lib/apiClient';
-import { FileJson, Layout, CheckCircle, XCircle, Copy, Check } from 'lucide-react';
+import { Check, CheckCircle, Copy, FileJson, Layout, XCircle } from 'lucide-react';
+import { useState } from 'react';
 
 interface OutputViewerProps {
   result: AgentRunResult | null;
@@ -30,9 +29,7 @@ export function OutputViewer({ result }: OutputViewerProps) {
             <FileJson className="h-5 w-5" />
             Output
           </CardTitle>
-          <CardDescription>
-            Run an agent to see the output here
-          </CardDescription>
+          <CardDescription>Run an agent to see the output here</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -67,9 +64,7 @@ export function OutputViewer({ result }: OutputViewerProps) {
                 <div className="text-sm font-medium text-muted-foreground">{key}</div>
                 <div className="text-sm">
                   {typeof value === 'object' ? (
-                    <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(value, null, 2)}
-                    </pre>
+                    <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">{JSON.stringify(value, null, 2)}</pre>
                   ) : (
                     <p>{String(value)}</p>
                   )}
@@ -85,11 +80,7 @@ export function OutputViewer({ result }: OutputViewerProps) {
   };
 
   const renderRawView = () => {
-    return (
-      <pre className="bg-muted p-4 rounded-md text-xs overflow-x-auto">
-        {JSON.stringify(result, null, 2)}
-      </pre>
-    );
+    return <pre className="bg-muted p-4 rounded-md text-xs overflow-x-auto">{JSON.stringify(result, null, 2)}</pre>;
   };
 
   return (
@@ -101,13 +92,6 @@ export function OutputViewer({ result }: OutputViewerProps) {
               <FileJson className="h-5 w-5" />
               Output
             </CardTitle>
-            <div className="flex items-center gap-2">
-              {result.success ? (
-                <Badge className="bg-green-600">Success</Badge>
-              ) : (
-                <Badge variant="destructive">Error</Badge>
-              )}
-            </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex border rounded-md">
@@ -131,18 +115,12 @@ export function OutputViewer({ result }: OutputViewerProps) {
               </Button>
             </div>
             <Button variant="outline" size="sm" onClick={handleCopy}>
-              {copied ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        {viewMode === 'pretty' ? renderPrettyView() : renderRawView()}
-      </CardContent>
+      <CardContent>{viewMode === 'pretty' ? renderPrettyView() : renderRawView()}</CardContent>
     </Card>
   );
 }
