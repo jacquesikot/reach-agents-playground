@@ -2,8 +2,7 @@ import OpenAI from 'openai';
 import { opikApi } from './apiClient';
 
 const openai = new OpenAI({
-  apiKey:
-    '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',
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
