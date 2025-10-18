@@ -11,6 +11,7 @@ import type { Agent, AgentRunInput, AgentRunResult } from '@/lib/apiClient';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { History } from 'lucide-react';
+import { formatResponseTime, formatHumanReadableDate } from '@/lib/utils';
 
 export function Dashboard() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -104,12 +105,17 @@ export function Dashboard() {
                               <div key={entry.id} className="text-xs p-2 bg-muted rounded-md space-y-1">
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">
-                                    {new Date(entry.timestamp).toLocaleString()}
+                                    {formatHumanReadableDate(entry.timestamp)}
                                   </span>
                                   <span className={entry.result.success ? 'text-green-600' : 'text-destructive'}>
                                     {entry.result.success ? 'Success' : 'Error'}
                                   </span>
                                 </div>
+                                {entry.result.responseTime !== undefined && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Response time: {formatResponseTime(entry.result.responseTime)}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

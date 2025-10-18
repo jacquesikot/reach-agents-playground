@@ -70,4 +70,5 @@ export interface AgentRunResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  responseTime?: number; // Response time in milliseconds
 }
