@@ -83,6 +83,7 @@ export function useRunAgent() {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
             'content-type': 'application/json',
+            'X-Playground': 'true',
           },
         });
 
@@ -97,7 +98,8 @@ export function useRunAgent() {
         const errorMessage = error instanceof Error ? error.message : 'Failed to run agent';
         const responseTime =
           error instanceof Error && 'response' in error
-            ? Date.now() - (error as any).response?.config?.startTime || 0
+            ? Date.now() -
+              ((error as { response?: { config?: { startTime?: number } } }).response?.config?.startTime ?? 0)
             : 0;
 
         return {
