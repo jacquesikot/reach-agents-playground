@@ -2,6 +2,12 @@
 
 A modern, frontend-only internal tool for testing and iterating on AI agents. Built with React, TypeScript, Vite, TailwindCSS, and Shadcn UI.
 
+[![React](https://img.shields.io/badge/React-19.1.1-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-7.1.7-646CFF.svg)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.18-38B2AC.svg)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 ## Features
 
 - **Authentication**: Secure login via Supabase Auth
@@ -33,12 +39,14 @@ A modern, frontend-only internal tool for testing and iterating on AI agents. Bu
 ### Installation
 
 1. Clone the repository:
+
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/your-username/reach-agent-playground.git
 cd reach-agent-playground
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -63,6 +71,7 @@ VITE_OPIK_WORKSPACE=your-workspace
 ```
 
 4. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -128,7 +137,9 @@ src/
 ### Features Detail
 
 #### Dynamic Input Forms
+
 The app automatically generates input forms based on the agent's `model_input_schema`. It supports:
+
 - Text inputs
 - Number inputs
 - Textareas for long text
@@ -136,11 +147,13 @@ The app automatically generates input forms based on the agent's `model_input_sc
 - Required field validation
 
 #### Output Viewer
+
 - **Pretty View**: Structured, readable output with success/error indicators
 - **Raw JSON**: Full JSON response for debugging
 - **Copy to Clipboard**: Quick copy functionality
 
 #### History
+
 - Recent runs are stored locally
 - Shows timestamp and success/error status
 - Up to 50 runs per agent
@@ -149,7 +162,9 @@ The app automatically generates input forms based on the agent's `model_input_sc
 ## API Integration
 
 ### Agent API
+
 Fetches agents from your internal API:
+
 ```typescript
 GET /api/internal/agents
 Headers:
@@ -158,7 +173,9 @@ Headers:
 ```
 
 ### Opik API
+
 Manages prompts:
+
 ```typescript
 GET /v1/workspaces/{workspace}/prompts/{agentId}
 PATCH /v1/workspaces/{workspace}/prompts/{agentId}
@@ -167,6 +184,7 @@ Headers:
 ```
 
 ### Running Agents
+
 ```typescript
 POST {agent.endpoint}
 Headers:
@@ -177,12 +195,15 @@ Body: { ...inputs from form }
 ## Development
 
 ### Code Style
+
 - TypeScript strict mode enabled
 - ESLint configured for React
 - Prettier-compatible formatting
 
 ### Adding New Components
+
 Follow the Shadcn UI pattern for consistency:
+
 ```bash
 # Components go in src/components/ui/
 # Use the cn() utility for className merging
@@ -191,16 +212,19 @@ Follow the Shadcn UI pattern for consistency:
 ## Troubleshooting
 
 ### Authentication Issues
+
 - Verify Supabase URL and publishable key
 - Check that your Supabase project allows password authentication
 - Ensure users are created in your Supabase project
 
 ### API Connection Issues
+
 - Verify all API endpoints are accessible
 - Check CORS settings on your backend
 - Confirm API keys are valid
 
 ### Build Issues
+
 - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
 - Clear Vite cache: `rm -rf node_modules/.vite`
 
@@ -214,10 +238,37 @@ Follow the Shadcn UI pattern for consistency:
 - [ ] Batch agent execution
 - [ ] Advanced filtering and sorting
 
+## Screenshots
+
+_Screenshots would go here once the application is deployed_
+
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please follow the existing code style and submit pull requests for review.
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please follow the existing code style and submit pull requests for review.
+
+## Support
+
+If you have any questions or need help, please:
+
+- Open an issue on GitHub
+- Check the troubleshooting section above
+- Review the project documentation
+
+## Acknowledgments
+
+- Built with [Vite](https://vitejs.dev/) for fast development
+- UI components from [Shadcn UI](https://ui.shadcn.com/)
+- Styled with [TailwindCSS](https://tailwindcss.com/)
+- Authentication powered by [Supabase](https://supabase.com/)
