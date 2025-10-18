@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import type { AgentRunResult } from '@/lib/apiClient';
 import { Check, CheckCircle, Copy, FileJson, Layout, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface OutputViewerProps {
   result: AgentRunResult | null;
@@ -11,6 +12,28 @@ interface OutputViewerProps {
 export function OutputViewer({ result }: OutputViewerProps) {
   const [viewMode, setViewMode] = useState<'pretty' | 'raw'>('pretty');
   const [copied, setCopied] = useState(false);
+
+  // Function to detect if content is markdown
+  const isMarkdown = (content: string): boolean => {
+    if (typeof content !== 'string') return false;
+
+    // Check for common markdown patterns
+    const markdownPatterns = [
+      /^#{1,6}\s+/m, // Headers
+      /\*\*.*?\*\*/, // Bold
+      /\*.*?\*/, // Italic
+      /^\s*[-*+]\s+/m, // Unordered lists
+      /^\s*\d+\.\s+/m, // Ordered lists
+      /```[\s\S]*?```/, // Code blocks
+      /`.*?`/, // Inline code
+      /^\s*>\s+/m, // Blockquotes
+      /\[.*?\]\(.*?\)/, // Links
+      /^\s*\|.*\|.*\|/m, // Tables
+      /^---+$/m, // Horizontal rules
+    ];
+
+    return markdownPatterns.some((pattern) => pattern.test(content));
+  };
 
   const handleCopy = async () => {
     if (!result) return;
@@ -65,6 +88,8 @@ export function OutputViewer({ result }: OutputViewerProps) {
                 <div className="text-sm">
                   {typeof value === 'object' ? (
                     <pre className="bg-muted p-2 rounded text-xs overflow-x-auto">{JSON.stringify(value, null, 2)}</pre>
+                  ) : typeof value === 'string' && isMarkdown(value) ? (
+                    <MarkdownRenderer content={value} />
                   ) : (
                     <p>{String(value)}</p>
                   )}
@@ -72,6 +97,8 @@ export function OutputViewer({ result }: OutputViewerProps) {
               </div>
             ))}
           </div>
+        ) : typeof result.data === 'string' && isMarkdown(result.data) ? (
+          <MarkdownRenderer content={result.data} />
         ) : (
           <div className="text-sm">{String(result.data)}</div>
         )}
