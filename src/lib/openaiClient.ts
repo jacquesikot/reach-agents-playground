@@ -14,7 +14,21 @@ export interface PromptVersionRequest {
   };
 }
 
-export async function createPromptVersion(promptId: string, template: string, changeDescription: string): Promise<any> {
+export interface PromptVersionResponse {
+  id: string;
+  name: string;
+  version: {
+    template: string;
+    change_description: string;
+    created_at: string;
+  };
+}
+
+export async function createPromptVersion(
+  promptId: string,
+  template: string,
+  changeDescription: string
+): Promise<PromptVersionResponse> {
   try {
     // First, get the prompt details to get the name
     const promptResponse = await opikApi.get(`/v1/private/prompts/${promptId}`);
