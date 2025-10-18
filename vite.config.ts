@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -20,20 +21,10 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/opik/, '/opik/api'),
           configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq, req) => {
+            proxy.on('proxyReq', (proxyReq) => {
               // Add Opik API key and workspace headers
               const apiKey = env.VITE_OPIK_API_KEY;
               const workspace = env.VITE_OPIK_WORKSPACE;
-
-              console.log('=== PROXY DEBUG ===');
-              console.log('Original path:', req.url);
-              console.log('Proxied path:', proxyReq.path);
-              console.log('API Key present:', !!apiKey);
-              console.log('Workspace:', workspace);
-              console.log('Environment check:', {
-                VITE_OPIK_API_KEY: env.VITE_OPIK_API_KEY ? 'Present' : 'Missing',
-                VITE_OPIK_WORKSPACE: env.VITE_OPIK_WORKSPACE,
-              });
 
               if (apiKey) {
                 proxyReq.setHeader('authorization', apiKey);
