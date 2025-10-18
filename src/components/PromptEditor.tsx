@@ -5,7 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePrompt, useCreatePromptVersion } from '@/hooks/useAgents';
 import type { Agent } from '@/lib/apiClient';
-import { Loader2, Save, FileText, AlertCircle, Upload, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import {
+  Loader2,
+  Save,
+  FileText,
+  AlertCircle,
+  Upload,
+  CheckCircle,
+  XCircle,
+  RotateCcw,
+  Maximize2,
+  X,
+} from 'lucide-react';
 
 interface PromptEditorProps {
   agent: Agent | null;
@@ -19,6 +30,7 @@ export function PromptEditor({ agent }: PromptEditorProps) {
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [lastAction, setLastAction] = useState<'local' | 'version' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Local storage key for this agent's prompt
   const localStorageKey = `prompt_${agent?.prompt_id || 'default'}`;
@@ -127,6 +139,20 @@ export function PromptEditor({ agent }: PromptEditorProps) {
     return savedContent !== null && savedContent !== (prompt?.content || '');
   };
 
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isModalOpen]);
+
   if (!agent) {
     return (
       <Card>
@@ -195,6 +221,24 @@ export function PromptEditor({ agent }: PromptEditorProps) {
             </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setIsModalOpen(true)}
+                    disabled={!agent?.prompt_id}
+                    size="sm"
+                    variant="ghost"
+                    className="w-full sm:w-auto"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Expand editor</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -295,6 +339,143 @@ export function PromptEditor({ agent }: PromptEditorProps) {
           )}
         </div>
       </CardContent>
+
+      {/* Modal for expanded editor */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[95vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Prompt Editor - {agent.name}
+                  {prompt?.version && ` (Version ${prompt.version})`}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">Large editor view for better editing experience</p>
+              </div>
+              <Button onClick={() => setIsModalOpen(false)} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 flex flex-col p-6 min-h-0">
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleResetLocal}
+                        disabled={!hasLocalChangesToReset() || !agent?.prompt_id}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset Local
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Reset local changes</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasLocalChanges || !agent?.prompt_id}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Locally
+                </Button>
+                <Button
+                  onClick={handleCreateVersion}
+                  disabled={!hasChanges || createPromptVersion.isPending || !agent?.prompt_id}
+                  size="sm"
+                  variant="default"
+                >
+                  {createPromptVersion.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Version...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Create Version
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Large textarea */}
+              <Textarea
+                value={content}
+                onChange={(e) => handleChange(e.target.value)}
+                placeholder={agent?.prompt_id ? 'Enter prompt content...' : 'No prompt ID available for this agent'}
+                className="flex-1 font-mono text-sm resize-none"
+                disabled={!agent?.prompt_id}
+              />
+
+              {/* Status messages */}
+              <div className="mt-4 space-y-2">
+                {actionError && (
+                  <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                    <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span className="break-words">{actionError}</span>
+                  </div>
+                )}
+                {lastAction === 'local' && (
+                  <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span className="break-words">Successfully saved to local storage</span>
+                  </div>
+                )}
+                {lastAction === 'version' && (
+                  <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span className="break-words">Successfully created new prompt version</span>
+                  </div>
+                )}
+                {hasChanges && (
+                  <div className="flex items-start gap-2 text-xs text-orange-600 bg-orange-50 p-2 rounded-md">
+                    <span className="text-orange-500">⚠️</span>
+                    <span className="break-words">You have unsaved changes to the server version</span>
+                  </div>
+                )}
+                {hasLocalChanges && (
+                  <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-md">
+                    <span className="text-blue-500">💾</span>
+                    <span className="break-words">You have unsaved changes in local storage</span>
+                  </div>
+                )}
+                {hasLocalChanges && hasChanges && (
+                  <div className="flex items-start gap-2 text-xs text-purple-600 bg-purple-50 p-2 rounded-md">
+                    <span className="text-purple-500">🔄</span>
+                    <span className="break-words">Both local and server versions have changes</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-2 p-6 border-t bg-gray-50">
+              <Button onClick={() => setIsModalOpen(false)} variant="outline">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
