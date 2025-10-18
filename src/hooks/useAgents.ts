@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { agentApi, opikApi } from '@/lib/apiClient';
 import type { Agent, Prompt, OpikPrompt, AgentRunInput, AgentRunResult } from '@/lib/apiClient';
 import { useAuth } from '@/contexts/AuthContext';
+import { createPromptVersion, generateChangeDescription } from '@/lib/openaiClient';
 import axios from 'axios';
 
 export function useAgents() {
@@ -94,6 +95,37 @@ export function useRunAgent() {
           error: errorMessage,
         };
       }
+    },
+  });
+}
+
+export function useCreatePromptVersion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      promptId,
+      template,
+      oldTemplate,
+    }: {
+      promptId: string;
+      template: string;
+      oldTemplate: string;
+    }) => {
+      try {
+        // Generate change description using OpenAI
+        const changeDescription = await generateChangeDescription(oldTemplate, template);
+
+        // Create new prompt version
+        const result = await createPromptVersion(promptId, template, changeDescription);
+        return result;
+      } catch (error) {
+        console.error('Failed to create prompt version:', error);
+        throw error;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['prompt', variables.promptId] });
     },
   });
 }
