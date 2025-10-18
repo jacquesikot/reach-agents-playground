@@ -10,7 +10,7 @@ export function useAgents() {
     queryKey: ['agents'],
     queryFn: async () => {
       const response = await agentApi.get('/agents');
-      return response.data.agents;
+      return response.data.agents.filter((agent: Agent) => agent.playground_mode);
     },
   });
 }
