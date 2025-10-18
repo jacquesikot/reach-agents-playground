@@ -5,9 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # Ports are managed by Coolify
-    # ports:
-    #   - "3000:80"
     environment:
       - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
       - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
@@ -19,9 +16,3 @@ services:
       - VITE_OPIK_PROJECT_NAME=${VITE_OPIK_PROJECT_NAME}
       - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
