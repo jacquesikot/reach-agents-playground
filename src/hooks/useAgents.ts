@@ -77,6 +77,8 @@ export function useRunAgent() {
       try {
         const baseURL = import.meta.env.VITE_AGENT_API_BASE_URL.replace('/api/internal', '');
 
+        const startTime = Date.now();
+
         const response = await axios.post(`${baseURL}${agent.endpoint}`, inputs, {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
@@ -84,15 +86,24 @@ export function useRunAgent() {
           },
         });
 
+        const responseTime = Date.now() - startTime;
+
         return {
           success: true,
           data: response.data,
+          responseTime,
         };
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to run agent';
+        const responseTime =
+          error instanceof Error && 'response' in error
+            ? Date.now() - (error as any).response?.config?.startTime || 0
+            : 0;
+
         return {
           success: false,
           error: errorMessage,
+          responseTime,
         };
       }
     },
