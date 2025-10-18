@@ -17,6 +17,7 @@ export function Dashboard() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentResult, setCurrentResult] = useState<AgentRunResult | null>(null);
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<string | null>(null);
 
   const { data: agents = [], isLoading } = useAgents();
   const runAgent = useRunAgent();
@@ -39,6 +40,7 @@ export function Dashboard() {
     if (!selectedAgent) return;
 
     setCurrentResult(null);
+    setSelectedHistoryEntry(null); // Clear selected history entry when running new request
 
     const result = await runAgent.mutateAsync({
       agent: selectedAgent,
@@ -56,7 +58,22 @@ export function Dashboard() {
     });
   };
 
+  const handleSelectHistoryEntry = (entryId: string) => {
+    const entry = agentHistory.find((e) => e.id === entryId);
+    if (entry) {
+      setCurrentResult(entry.result);
+      setSelectedHistoryEntry(entryId);
+    }
+  };
+
   const agentHistory = selectedAgent ? getAgentHistory(selectedAgent.id) : [];
+
+  // Clear selected history entry when switching agents
+  const handleSelectAgent = (agent: Agent | null) => {
+    setSelectedAgent(agent);
+    setSelectedHistoryEntry(null);
+    setCurrentResult(null);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -68,7 +85,7 @@ export function Dashboard() {
           <AgentList
             agents={filteredAgents}
             selectedAgent={selectedAgent}
-            onSelectAgent={setSelectedAgent}
+            onSelectAgent={handleSelectAgent}
             loading={isLoading}
           />
         </div>
@@ -96,13 +113,21 @@ export function Dashboard() {
                             Recent Runs
                           </CardTitle>
                           <CardDescription>
-                            Last {agentHistory.length} run{agentHistory.length !== 1 ? 's' : ''}
+                            Last {agentHistory.length} run{agentHistory.length !== 1 ? 's' : ''} • Click to view result
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
                             {agentHistory.slice(0, 5).map((entry) => (
-                              <div key={entry.id} className="text-xs p-2 bg-muted rounded-md space-y-1">
+                              <div
+                                key={entry.id}
+                                className={`text-xs p-2 rounded-md space-y-1 cursor-pointer transition-colors hover:bg-muted/80 ${
+                                  selectedHistoryEntry === entry.id
+                                    ? 'bg-primary/10 border border-primary/20'
+                                    : 'bg-muted'
+                                }`}
+                                onClick={() => handleSelectHistoryEntry(entry.id)}
+                              >
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">
                                     {formatHumanReadableDate(entry.timestamp)}
