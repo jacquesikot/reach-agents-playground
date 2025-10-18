@@ -121,7 +121,7 @@ export function Dashboard() {
                   {/* Right Column - Input Form & Output */}
                   <div className="space-y-6">
                     <InputForm
-                      schema={selectedAgent.model_input_schema}
+                      schema={selectedAgent.endpoint_params}
                       onSubmit={handleRunAgent}
                       loading={runAgent.isPending}
                     />

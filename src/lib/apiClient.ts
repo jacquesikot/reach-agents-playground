@@ -27,6 +27,7 @@ export interface Agent {
   endpoint: string;
   capabilities?: string[];
   model_input_schema?: Record<string, unknown>;
+  endpoint_params?: Record<string, unknown>;
   prompt_id?: string;
 }
 
