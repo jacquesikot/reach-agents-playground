@@ -1,22 +1,7 @@
 {
-  "functions": {
-    "api/opik/v1/private/prompts/[id].ts": {
-      "runtime": "nodejs18.x"
-    },
-    "api/opik/v1/private/prompts/versions.ts": {
-      "runtime": "nodejs18.x"
-    },
-    "api/internal/agents.ts": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ],
