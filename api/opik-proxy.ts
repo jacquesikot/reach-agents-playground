@@ -21,23 +21,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!apiKey || !workspace) {
     console.error('Missing environment variables:', {
       hasApiKey: !!apiKey,
-      hasWorkspace: !!workspace
+      hasWorkspace: !!workspace,
+      env: process.env
     });
     return res.status(500).json({ error: 'Opik API configuration missing' });
   }
 
   try {
-    // Extract the path from the request
-    const { path } = req.query;
-    const pathSegments = Array.isArray(path) ? path : [path];
-    const apiPath = pathSegments.join('/');
+    // Extract the path from the query parameter
+    const pathParam = req.query.path;
+    let apiPath = '';
+
+    if (Array.isArray(pathParam)) {
+      apiPath = pathParam.join('/');
+    } else if (pathParam) {
+      apiPath = pathParam;
+    } else {
+      return res.status(400).json({ error: 'Path parameter is required' });
+    }
 
     const url = `https://www.comet.com/opik/api/${apiPath}`;
-    console.log('Proxying request:', {
+    console.log('Proxying Opik request:', {
       method: req.method,
       url,
       path: apiPath,
-      query: req.query
+      hasApiKey: !!apiKey,
+      hasWorkspace: !!workspace
     });
 
     const fetchOptions: RequestInit = {
@@ -56,18 +65,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const response = await fetch(url, fetchOptions);
+    const contentType = response.headers.get('content-type');
 
-    const data = await response.json();
+    // Handle JSON responses
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
 
-    if (!response.ok) {
-      console.error('Opik API error response:', {
-        status: response.status,
-        data
-      });
+      if (!response.ok) {
+        console.error('Opik API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        });
+      }
+
       return res.status(response.status).json(data);
     }
 
-    return res.status(response.status).json(data);
+    // Handle non-JSON responses
+    const text = await response.text();
+    return res.status(response.status).send(text);
+
   } catch (error) {
     console.error('Opik API error:', error);
     return res.status(500).json({

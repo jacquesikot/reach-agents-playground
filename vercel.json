@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/opik/:path*",
+      "destination": "/api/opik-proxy?path=:path*"
+    },
+    {
       "source": "/((?!api).*)",
       "destination": "/index.html"
     }
