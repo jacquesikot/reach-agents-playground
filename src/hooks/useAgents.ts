@@ -84,8 +84,13 @@ export function useRunAgent() {
         // Ensure the base URL doesn't end with a slash
         baseURL = baseURL.replace(/\/$/, '');
 
-        // Ensure the endpoint starts with a slash
-        const endpoint = agent.endpoint.startsWith('/') ? agent.endpoint : `/${agent.endpoint}`;
+        // Ensure the endpoint starts with a slash and ends with a slash (to prevent 307 redirects)
+        let endpoint = agent.endpoint.startsWith('/') ? agent.endpoint : `/${agent.endpoint}`;
+
+        // Add trailing slash if not present (many APIs redirect without it)
+        if (!endpoint.endsWith('/')) {
+          endpoint = `${endpoint}/`;
+        }
 
         // Construct the full URL
         const url = `${baseURL}${endpoint}`;
@@ -94,7 +99,8 @@ export function useRunAgent() {
           baseURL,
           endpoint,
           fullURL: url,
-          agentName: agent.name
+          agentName: agent.name,
+          hasToken: !!session?.access_token
         });
 
         const startTime = Date.now();
@@ -105,6 +111,7 @@ export function useRunAgent() {
             'content-type': 'application/json',
             'X-Playground': 'true',
           },
+          maxRedirects: 0, // Don't follow redirects, fail instead so we can see the issue
         });
 
         const responseTime = Date.now() - startTime;
