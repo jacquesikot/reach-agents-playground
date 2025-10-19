@@ -2,11 +2,9 @@ import axios from 'axios';
 
 // Agent API client
 export const agentApi = axios.create({
-  baseURL: import.meta.env.VITE_AGENT_API_BASE_URL,
+  baseURL: '/api/internal',
   headers: {
     'content-type': 'application/json',
-    'x-api-key': import.meta.env.VITE_AGENT_API_KEY,
-    'x-organization-id': import.meta.env.VITE_AGENT_ORG_ID,
   },
 });
 
