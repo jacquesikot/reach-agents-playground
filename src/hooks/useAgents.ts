@@ -75,11 +75,31 @@ export function useRunAgent() {
   return useMutation<AgentRunResult, Error, { agent: Agent; inputs: AgentRunInput }>({
     mutationFn: async ({ agent, inputs }) => {
       try {
-        const baseURL = import.meta.env.VITE_AGENT_API_BASE_URL.replace('/api/internal', '');
+        // Get the base URL and normalize it
+        let baseURL = import.meta.env.VITE_AGENT_API_BASE_URL;
+
+        // Remove /api/internal suffix if present
+        baseURL = baseURL.replace(/\/api\/internal\/?$/, '');
+
+        // Ensure the base URL doesn't end with a slash
+        baseURL = baseURL.replace(/\/$/, '');
+
+        // Ensure the endpoint starts with a slash
+        const endpoint = agent.endpoint.startsWith('/') ? agent.endpoint : `/${agent.endpoint}`;
+
+        // Construct the full URL
+        const url = `${baseURL}${endpoint}`;
+
+        console.log('Running agent:', {
+          baseURL,
+          endpoint,
+          fullURL: url,
+          agentName: agent.name
+        });
 
         const startTime = Date.now();
 
-        const response = await axios.post(`${baseURL}${agent.endpoint}`, inputs, {
+        const response = await axios.post(url, inputs, {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
             'content-type': 'application/json',
@@ -95,6 +115,7 @@ export function useRunAgent() {
           responseTime,
         };
       } catch (error: unknown) {
+        console.error('Agent run error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Failed to run agent';
         const responseTime =
           error instanceof Error && 'response' in error
