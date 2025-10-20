@@ -43,6 +43,29 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        '/api/internal': {
+          target: 'https://api.dev.usereach.ai',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/internal/, '/api/internal'),
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              // Add Agent API headers
+              const apiKey = env.VITE_AGENT_API_KEY;
+              const orgId = env.VITE_AGENT_ORG_ID;
+
+              if (apiKey) {
+                proxyReq.setHeader('x-api-key', apiKey);
+              }
+
+              if (orgId) {
+                proxyReq.setHeader('x-organization-id', orgId);
+              }
+
+              proxyReq.setHeader('Accept', 'application/json');
+              proxyReq.setHeader('Content-Type', 'application/json');
+            });
+          },
+        },
       },
     },
   };
