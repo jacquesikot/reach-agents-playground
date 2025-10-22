@@ -100,7 +100,7 @@ export function useRunAgent() {
           endpoint,
           fullURL: url,
           agentName: agent.name,
-          hasToken: !!session?.access_token
+          hasToken: !!session?.access_token,
         });
 
         const startTime = Date.now();
@@ -109,7 +109,7 @@ export function useRunAgent() {
           headers: {
             Authorization: `Bearer ${session?.access_token}`,
             'content-type': 'application/json',
-            'X-Playground': 'true',
+            // 'X-Playground': 'true',
           },
           maxRedirects: 0, // Don't follow redirects, fail instead so we can see the issue
         });
