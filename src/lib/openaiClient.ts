@@ -31,7 +31,8 @@ export async function createPromptVersion(
 ): Promise<PromptVersionResponse> {
   try {
     // First, get the prompt details to get the name
-    const promptResponse = await opikApi.get(`/v1/private/prompts/${promptId}`);
+    const timestamp = Date.now();
+    const promptResponse = await opikApi.get(`/v1/private/prompts/${promptId}?t=${timestamp}`);
     const promptName = promptResponse.data.name;
 
     // Then create a new version using the prompt name

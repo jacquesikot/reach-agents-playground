@@ -40,6 +40,23 @@ export default defineConfig(({ mode }) => {
               }
 
               proxyReq.setHeader('Accept', 'application/json');
+
+              // Add cache-busting headers to prevent stale responses
+              proxyReq.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+              proxyReq.setHeader('Pragma', 'no-cache');
+              proxyReq.setHeader('Expires', '0');
+            });
+
+            proxy.on('proxyRes', (proxyRes) => {
+              // Remove any caching headers from the response
+              delete proxyRes.headers['cache-control'];
+              delete proxyRes.headers['etag'];
+              delete proxyRes.headers['last-modified'];
+
+              // Add no-cache headers to the response
+              proxyRes.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+              proxyRes.headers['Pragma'] = 'no-cache';
+              proxyRes.headers['Expires'] = '0';
             });
           },
         },
