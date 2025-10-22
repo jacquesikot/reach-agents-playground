@@ -22,8 +22,9 @@ export function usePrompt(promptId: string | null) {
       if (!promptId) throw new Error('Prompt ID is required');
 
       try {
-        // Fetch the specific prompt by ID
-        const response = await opikApi.get(`/v1/private/prompts/${promptId}`);
+        // Fetch the specific prompt by ID with cache-busting timestamp
+        const timestamp = Date.now();
+        const response = await opikApi.get(`/v1/private/prompts/${promptId}?t=${timestamp}`);
         const prompt: OpikPrompt = response.data;
 
         return {
@@ -100,7 +101,7 @@ export function useRunAgent() {
           endpoint,
           fullURL: url,
           agentName: agent.name,
-          hasToken: !!session?.access_token
+          hasToken: !!session?.access_token,
         });
 
         const startTime = Date.now();

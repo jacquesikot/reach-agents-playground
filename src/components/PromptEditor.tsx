@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,6 @@ import { usePrompt, useCreatePromptVersion } from '@/hooks/useAgents';
 import type { Agent } from '@/lib/apiClient';
 import {
   Loader2,
-  Save,
   FileText,
   AlertCircle,
   Upload,
@@ -16,19 +15,21 @@ import {
   RotateCcw,
   Maximize2,
   X,
+  Clock,
 } from 'lucide-react';
 
 interface PromptEditorProps {
   agent: Agent | null;
 }
 
+type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 export function PromptEditor({ agent }: PromptEditorProps) {
   const { data: prompt, isLoading, error } = usePrompt(agent?.prompt_id || null);
   const createPromptVersion = useCreatePromptVersion();
   const [content, setContent] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
-  const [hasLocalChanges, setHasLocalChanges] = useState(false);
-  const [lastAction, setLastAction] = useState<'local' | 'version' | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [actionError, setActionError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -39,7 +40,7 @@ export function PromptEditor({ agent }: PromptEditorProps) {
     if (prompt?.content) {
       setContent(prompt.content);
       setHasChanges(false);
-      setHasLocalChanges(false);
+      setAutosaveStatus('idle');
     }
   }, [prompt]);
 
@@ -49,27 +50,46 @@ export function PromptEditor({ agent }: PromptEditorProps) {
       const savedContent = localStorage.getItem(localStorageKey);
       if (savedContent && savedContent !== (prompt?.content || '')) {
         setContent(savedContent);
-        setHasLocalChanges(true);
+        setHasChanges(true);
       }
     }
   }, [agent?.prompt_id, localStorageKey, prompt?.content]);
 
-  const handleSave = () => {
-    if (!agent?.prompt_id) return;
+  // Debounced autosave function
+  const autosave = useCallback(
+    async (contentToSave: string) => {
+      if (!agent?.prompt_id || !contentToSave.trim()) return;
 
-    try {
-      localStorage.setItem(localStorageKey, content);
-      // Don't set hasLocalChanges to false here - keep it true since we have local changes
-      setLastAction('local');
-      setActionError(null);
+      setAutosaveStatus('saving');
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setLastAction(null), 3000);
-    } catch {
-      setActionError('Failed to save to local storage');
-      setTimeout(() => setActionError(null), 5000);
-    }
-  };
+      try {
+        localStorage.setItem(localStorageKey, contentToSave);
+        setAutosaveStatus('saved');
+
+        // Clear saved status after 2 seconds
+        setTimeout(() => setAutosaveStatus('idle'), 2000);
+      } catch (error) {
+        setAutosaveStatus('error');
+        setActionError('Failed to save locally');
+        setTimeout(() => {
+          setAutosaveStatus('idle');
+          setActionError(null);
+        }, 3000);
+      }
+    },
+    [agent?.prompt_id, localStorageKey]
+  );
+
+  // Debounced autosave effect
+  useEffect(() => {
+    if (!agent?.prompt_id || content === (prompt?.content || '')) return;
+
+    const timeoutId = setTimeout(() => {
+      autosave(content);
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [content, agent?.prompt_id, prompt?.content, autosave]);
 
   const handleCreateVersion = async () => {
     if (!agent?.prompt_id || !prompt?.content) return;
@@ -83,13 +103,9 @@ export function PromptEditor({ agent }: PromptEditorProps) {
 
       // Clear local storage after successful version creation
       localStorage.removeItem(localStorageKey);
-      setHasLocalChanges(false);
       setHasChanges(false);
-      setLastAction('version');
+      setAutosaveStatus('idle');
       setActionError(null);
-
-      // Clear success message after 5 seconds
-      setTimeout(() => setLastAction(null), 5000);
     } catch (err) {
       console.error('Failed to create prompt version:', err);
       setActionError('Failed to create prompt version. Please try again.');
@@ -107,12 +123,9 @@ export function PromptEditor({ agent }: PromptEditorProps) {
       // Reset content to server version
       const serverContent = prompt?.content || '';
       setContent(serverContent);
-      setHasLocalChanges(false);
-      setHasChanges(serverContent !== (prompt?.content || ''));
+      setHasChanges(false);
+      setAutosaveStatus('idle');
       setActionError(null);
-
-      // Clear any previous action messages
-      if (lastAction) setLastAction(null);
     } catch {
       setActionError('Failed to reset local changes');
       setTimeout(() => setActionError(null), 5000);
@@ -123,12 +136,7 @@ export function PromptEditor({ agent }: PromptEditorProps) {
     setContent(value);
     setHasChanges(value !== (prompt?.content || ''));
 
-    // Check if content differs from local storage
-    const savedContent = localStorage.getItem(localStorageKey);
-    setHasLocalChanges(value !== savedContent);
-
     // Clear any previous action messages when user starts typing
-    if (lastAction) setLastAction(null);
     if (actionError) setActionError(null);
   };
 
@@ -137,6 +145,35 @@ export function PromptEditor({ agent }: PromptEditorProps) {
     if (!agent?.prompt_id) return false;
     const savedContent = localStorage.getItem(localStorageKey);
     return savedContent !== null && savedContent !== (prompt?.content || '');
+  };
+
+  // Helper function to render autosave status
+  const renderAutosaveStatus = () => {
+    switch (autosaveStatus) {
+      case 'saving':
+        return (
+          <div className="flex items-center gap-1 text-xs text-blue-600">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Saving...</span>
+          </div>
+        );
+      case 'saved':
+        return (
+          <div className="flex items-center gap-1 text-xs text-green-600">
+            <CheckCircle className="h-3 w-3" />
+            <span>Saved locally</span>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex items-center gap-1 text-xs text-red-600">
+            <XCircle className="h-3 w-3" />
+            <span>Save failed</span>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   // Handle escape key to close modal
@@ -220,75 +257,75 @@ export function PromptEditor({ agent }: PromptEditorProps) {
               {prompt?.version && ` (Version ${prompt.version})`}
             </CardDescription>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setIsModalOpen(true)}
-                    disabled={!agent?.prompt_id}
-                    size="sm"
-                    variant="ghost"
-                    className="w-full sm:w-auto"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Expand editor</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleResetLocal}
-                    disabled={!hasLocalChangesToReset() || !agent?.prompt_id}
-                    size="sm"
-                    variant="ghost"
-                    className="w-full sm:w-auto"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Reset local changes</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button
-              onClick={handleSave}
-              disabled={!hasLocalChanges || !agent?.prompt_id}
-              size="sm"
-              variant="outline"
-              className="w-full sm:w-auto"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Save</span>
-              <span className="sm:hidden">Save</span>
-            </Button>
-            <Button
-              onClick={handleCreateVersion}
-              disabled={!hasChanges || createPromptVersion.isPending || !agent?.prompt_id}
-              size="sm"
-              variant="default"
-              className="w-full sm:w-auto"
-            >
-              {createPromptVersion.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Creating Version...</span>
-                  <span className="sm:hidden">Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Create Version</span>
-                  <span className="sm:hidden">Create</span>
-                </>
+          <div className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-center">
+            <div className="flex items-center gap-2">
+              {renderAutosaveStatus()}
+              {hasChanges && (
+                <div className="flex items-center gap-1 text-xs text-orange-600">
+                  <Clock className="h-3 w-3" />
+                  <span>Changes not saved to server</span>
+                </div>
               )}
-            </Button>
+            </div>
+            <div className="flex gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setIsModalOpen(true)}
+                      disabled={!agent?.prompt_id}
+                      size="sm"
+                      variant="ghost"
+                      className="w-full sm:w-auto"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Expand editor</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleResetLocal}
+                      disabled={!hasLocalChangesToReset() || !agent?.prompt_id}
+                      size="sm"
+                      variant="ghost"
+                      className="w-full sm:w-auto"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Reset to server version</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button
+                onClick={handleCreateVersion}
+                disabled={!hasChanges || createPromptVersion.isPending || !agent?.prompt_id}
+                size="sm"
+                variant="default"
+                className="w-full sm:w-auto"
+              >
+                {createPromptVersion.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Creating Version...</span>
+                    <span className="sm:hidden">Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Create Version</span>
+                    <span className="sm:hidden">Create</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -300,44 +337,14 @@ export function PromptEditor({ agent }: PromptEditorProps) {
           className="min-h-[300px] font-mono text-sm"
           disabled={!agent?.prompt_id}
         />
-        <div className="mt-3 space-y-2">
-          {actionError && (
+        {actionError && (
+          <div className="mt-3">
             <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
               <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <span className="break-words">{actionError}</span>
             </div>
-          )}
-          {lastAction === 'local' && (
-            <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-              <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span className="break-words">Successfully saved to local storage</span>
-            </div>
-          )}
-          {lastAction === 'version' && (
-            <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-              <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span className="break-words">Successfully created new prompt version</span>
-            </div>
-          )}
-          {hasChanges && (
-            <div className="flex items-start gap-2 text-xs text-orange-600 bg-orange-50 p-2 rounded-md">
-              <span className="text-orange-500">⚠️</span>
-              <span className="break-words">You have unsaved changes to the server version</span>
-            </div>
-          )}
-          {hasLocalChanges && (
-            <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-md">
-              <span className="text-blue-500">💾</span>
-              <span className="break-words">You have unsaved changes in local storage</span>
-            </div>
-          )}
-          {hasLocalChanges && hasChanges && (
-            <div className="flex items-start gap-2 text-xs text-purple-600 bg-purple-50 p-2 rounded-md">
-              <span className="text-purple-500">🔄</span>
-              <span className="break-words">Both local and server versions have changes</span>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
 
       {/* Modal for expanded editor */}
@@ -368,53 +375,55 @@ export function PromptEditor({ agent }: PromptEditorProps) {
 
             {/* Modal Content */}
             <div className="flex-1 flex flex-col p-6 min-h-0">
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleResetLocal}
-                        disabled={!hasLocalChangesToReset() || !agent?.prompt_id}
-                        size="sm"
-                        variant="ghost"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Reset Local
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Reset local changes</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Button
-                  onClick={handleSave}
-                  disabled={!hasLocalChanges || !agent?.prompt_id}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Locally
-                </Button>
-                <Button
-                  onClick={handleCreateVersion}
-                  disabled={!hasChanges || createPromptVersion.isPending || !agent?.prompt_id}
-                  size="sm"
-                  variant="default"
-                >
-                  {createPromptVersion.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Version...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Create Version
-                    </>
+              {/* Action buttons and status */}
+              <div className="flex flex-wrap gap-2 mb-4 justify-between items-center">
+                <div className="flex items-center gap-2">
+                  {renderAutosaveStatus()}
+                  {hasChanges && (
+                    <div className="flex items-center gap-1 text-xs text-orange-600">
+                      <Clock className="h-3 w-3" />
+                      <span>Changes not saved to server</span>
+                    </div>
                   )}
-                </Button>
+                </div>
+                <div className="flex gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleResetLocal}
+                          disabled={!hasLocalChangesToReset() || !agent?.prompt_id}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Reset to Server
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Reset to server version</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button
+                    onClick={handleCreateVersion}
+                    disabled={!hasChanges || createPromptVersion.isPending || !agent?.prompt_id}
+                    size="sm"
+                    variant="default"
+                  >
+                    {createPromptVersion.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Version...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Create Version
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               {/* Large textarea */}
@@ -427,44 +436,14 @@ export function PromptEditor({ agent }: PromptEditorProps) {
               />
 
               {/* Status messages */}
-              <div className="mt-4 space-y-2">
-                {actionError && (
+              {actionError && (
+                <div className="mt-4">
                   <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
                     <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <span className="break-words">{actionError}</span>
                   </div>
-                )}
-                {lastAction === 'local' && (
-                  <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-                    <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <span className="break-words">Successfully saved to local storage</span>
-                  </div>
-                )}
-                {lastAction === 'version' && (
-                  <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-                    <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    <span className="break-words">Successfully created new prompt version</span>
-                  </div>
-                )}
-                {hasChanges && (
-                  <div className="flex items-start gap-2 text-xs text-orange-600 bg-orange-50 p-2 rounded-md">
-                    <span className="text-orange-500">⚠️</span>
-                    <span className="break-words">You have unsaved changes to the server version</span>
-                  </div>
-                )}
-                {hasLocalChanges && (
-                  <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-md">
-                    <span className="text-blue-500">💾</span>
-                    <span className="break-words">You have unsaved changes in local storage</span>
-                  </div>
-                )}
-                {hasLocalChanges && hasChanges && (
-                  <div className="flex items-start gap-2 text-xs text-purple-600 bg-purple-50 p-2 rounded-md">
-                    <span className="text-purple-500">🔄</span>
-                    <span className="break-words">Both local and server versions have changes</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
